@@ -2,9 +2,6 @@
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
-const API_URL =
-  import.meta.env.VITE_API_URL ??
-  "http://localhost:8000/api/v1";
 
 export function useTaskEvents(enabled: boolean) {
   const queryClient = useQueryClient();
@@ -16,7 +13,11 @@ export function useTaskEvents(enabled: boolean) {
     let reconnectTimer: ReturnType<typeof setTimeout>;
     let stopped = false;
 
-    const wsUrl = API_URL.replace(/^http/, "ws");
+
+
+    const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+
+    const wsUrl = `${wsProtocol}//${window.location.host}`;
 
     function connect() {
       if (stopped) return;

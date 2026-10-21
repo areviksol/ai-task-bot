@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     app_env: str = "development"
     debug: bool = False
 
-    frontend_url: str = "http://localhost:5173"
+    frontend_url: str = "http://localhost:8080"
     session_cookie_secure: bool = True
 
     postgres_user: str

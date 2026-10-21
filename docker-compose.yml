@@ -90,6 +90,18 @@ services:
       - --concurrency=2
 
 
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "127.0.0.1:8080:80"
+    depends_on:
+      - api
+    networks:
+      - internal
+    restart: unless-stopped
+
   beat:
     <<: *backend-common
     restart: unless-stopped
