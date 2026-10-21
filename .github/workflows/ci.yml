@@ -18,7 +18,7 @@ jobs:
         image: postgres:16-alpine
         env:
           POSTGRES_USER: taskbot
-          POSTGRES_PASSWORD: ci_test_password
+          POSTGRES_PASSWORD: ${{ secrets.CI_POSTGRES_PASSWORD }}
           POSTGRES_DB: taskbot_test
         ports:
           - 5433:5432
@@ -29,22 +29,17 @@ jobs:
           --health-retries 10
 
     env:
-      TEST_DATABASE_URL: postgresql+psycopg://taskbot:ci_test_password@127.0.0.1:5433/taskbot_test
       POSTGRES_HOST: 127.0.0.1
       POSTGRES_PORT: "5433"
       POSTGRES_USER: taskbot
-      POSTGRES_PASSWORD: ci_test_password
+      POSTGRES_PASSWORD: ${{ secrets.CI_POSTGRES_PASSWORD }}
       POSTGRES_DB: taskbot_test
-      REDIS_HOST: localhost
-      REDIS_PORT: "6380"
       DEBUG: "false"
-
-      # Non-production placeholders required by application config.
-      TELEGRAM_BOT_TOKEN: "123456:CIPlaceholderToken"
-      OPENAI_API_KEY: "ci-placeholder-key"
+      TELEGRAM_BOT_TOKEN: "123456:TestOnlyToken"
+      OPENAI_API_KEY: "test-only-key"
 
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v6
 
       - name: Set up Python
@@ -59,17 +54,24 @@ jobs:
           python -m pip install -r requirements.txt
           python -m pip install pytest httpx
 
+      - name: Configure test database
+        env:
+          CI_DB_PASSWORD: ${{ secrets.CI_POSTGRES_PASSWORD }}
+        shell: bash
+        run: |
+          echo "::add-mask::$CI_DB_PASSWORD"
+          echo "TEST_DATABASE_URL=postgresql+psycopg://taskbot:${CI_DB_PASSWORD}@127.0.0.1:5433/taskbot_test" >> "$GITHUB_ENV"
+
       - name: Run backend tests
         working-directory: backend
-        run: |
-          python -m pytest -v
+        run: python -m pytest -v
 
   frontend-build:
     name: Frontend build
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v6
 
       - name: Set up Node.js
@@ -92,12 +94,27 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v6
+
+      - name: Create temporary environment
+        shell: bash
+        env:
+          CI_DB_PASSWORD: ${{ secrets.CI_POSTGRES_PASSWORD }}
+        run: |
+          cp .env.example .env
+
+          {
+            echo "POSTGRES_USER=taskbot"
+            echo "POSTGRES_PASSWORD=$CI_DB_PASSWORD"
+            echo "POSTGRES_DB=taskbot"
+          } >> .env
+
+          chmod 600 .env
 
       - name: Validate Docker Compose
         env:
           POSTGRES_USER: taskbot
-          POSTGRES_PASSWORD: ci_test_password
+          POSTGRES_PASSWORD: ${{ secrets.CI_POSTGRES_PASSWORD }}
           POSTGRES_DB: taskbot
         run: docker compose config --quiet
