@@ -13,6 +13,7 @@ import {
 import type { TaskStatus } from "../features/tasks/types";
 import KanbanBoard from "../components/tasks/KanbanBoard";
 import { useTaskEvents } from "../features/tasks/useTaskEvents";
+import VoiceTaskButton from "../components/tasks/VoiceTaskButton";
 
 export default function DashboardPage() {
   const navigate = useNavigate();
@@ -123,7 +124,7 @@ export default function DashboardPage() {
           Add task
         </button>
       </form>
-
+        <VoiceTaskButton />
       {createMutation.isError && (
         <p className="error">Could not create task.</p>
       )}

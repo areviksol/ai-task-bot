@@ -4,7 +4,7 @@ from uuid import UUID
 from app.models.task import Task, TaskSource
 
 
-ORIGIN = {"Origin": "http://localhost:5173"}
+ORIGIN = {"Origin": "http://localhost:8080"}
 def test_tasks_require_authentication(client):
     response = client.get("/api/v1/tasks")
 
@@ -56,7 +56,7 @@ def test_user_cannot_update_another_users_task(
         f"/api/v1/tasks/{task.id}",
         json={"status": "completed"},
         headers={
-            "Origin": "http://localhost:5173"
+            "Origin": "http://localhost:8080"
         },
     )
 
@@ -85,7 +85,7 @@ def test_user_cannot_delete_another_users_task(
     response = authenticated_client.delete(
         f"/api/v1/tasks/{task.id}",
         headers={
-            "Origin": "http://localhost:5173"
+            "Origin": "http://localhost:8080"
         },
     )
 

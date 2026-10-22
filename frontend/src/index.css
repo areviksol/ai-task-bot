@@ -13,11 +13,14 @@ body {
   margin: 0;
 }
 
-button, input, select {
+button,
+input,
+select {
   font: inherit;
 }
 
-button, .primary-link {
+button,
+.primary-link {
   cursor: pointer;
   border: none;
   border-radius: 10px;
@@ -36,6 +39,8 @@ button:disabled {
   background: #e8eef9;
   color: #182234;
 }
+
+/* Dashboard */
 
 .dashboard {
   max-width: 1100px;
@@ -60,6 +65,8 @@ button:disabled {
   color: #64748b;
 }
 
+/* Task form */
+
 .task-form {
   display: flex;
   gap: 12px;
@@ -73,6 +80,8 @@ button:disabled {
   border: 1px solid #d7dfeb;
   border-radius: 10px;
 }
+
+/* List view */
 
 .task-list {
   display: grid;
@@ -94,7 +103,8 @@ button:disabled {
   margin: 0 0 8px;
 }
 
-.task-card p, .task-card small {
+.task-card p,
+.task-card small {
   color: #64748b;
 }
 
@@ -105,7 +115,10 @@ button:disabled {
   background: white;
 }
 
-.auth-page, .page-message {
+/* Authentication */
+
+.auth-page,
+.page-message {
   min-height: 100vh;
   display: grid;
   place-content: center;
@@ -135,6 +148,7 @@ button:disabled {
   color: #b91c1c;
 }
 
+/* Kanban board */
 
 .kanban-board {
   display: grid;
@@ -149,7 +163,9 @@ button:disabled {
   border: 2px solid transparent;
   border-radius: 14px;
   padding: 16px;
-  transition: background 150ms, border-color 150ms;
+  transition:
+    background 150ms ease,
+    border-color 150ms ease;
 }
 
 .kanban-column.is-over {
@@ -183,14 +199,25 @@ button:disabled {
   gap: 12px;
 }
 
+/* Draggable Kanban cards */
+
 .kanban-card {
-  background: white;
+  background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
   padding: 16px;
   cursor: grab;
   touch-action: none;
   overflow-wrap: anywhere;
+  user-select: none;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.kanban-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
 }
 
 .kanban-card:active {
@@ -220,21 +247,175 @@ button:disabled {
   padding-top: 32px;
 }
 
+/* Task card header */
 
-@media (max-width: 640px) {
-  .dashboard {
-    padding: 24px 16px;
+.task-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.task-card-header h3 {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Delete task button */
+
+.task-delete-button {
+  flex-shrink: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #e11d48;
+  font-size: 24px;
+  line-height: 1;
+  padding: 2px 8px;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: background 150ms ease;
+}
+
+.task-delete-button:hover:not(:disabled) {
+  background: rgba(225, 29, 72, 0.1);
+}
+
+.task-delete-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.task-delete-button:focus-visible {
+  outline: 2px solid #e11d48;
+  outline-offset: 2px;
+}
+
+/* Custom delete confirmation modal */
+
+.delete-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(5px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.delete-modal {
+  width: 100%;
+  max-width: 420px;
+  padding: 32px;
+  border-radius: 20px;
+  background: #ffffff;
+  color: #172033;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.2);
+  text-align: center;
+  animation: delete-modal-enter 0.2s ease-out;
+}
+
+.delete-modal-icon {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 18px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #fff1f2;
+  color: #e11d48;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.delete-modal h2 {
+  margin: 0 0 12px;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.delete-modal > p {
+  color: #64748b;
+  line-height: 1.6;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.delete-modal > p strong {
+  color: #172033;
+}
+
+.delete-modal-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 28px;
+}
+
+.delete-modal-actions button {
+  flex: 1;
+  min-height: 44px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease;
+}
+
+.delete-modal-cancel {
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #334155;
+}
+
+.delete-modal-cancel:hover:not(:disabled) {
+  background: #e2e8f0;
+}
+
+.delete-modal-confirm {
+  border: 1px solid #e11d48;
+  background: #e11d48;
+  color: #ffffff;
+}
+
+.delete-modal-confirm:hover:not(:disabled) {
+  background: #be123c;
+}
+
+.delete-modal-actions button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.delete-modal-actions button:focus-visible {
+  outline: 3px solid #94a3b8;
+  outline-offset: 2px;
+}
+
+.delete-modal-error {
+  color: #be123c !important;
+  margin-top: 12px;
+}
+
+/* Modal animation */
+
+@keyframes delete-modal-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
   }
 
-  .dashboard-header, .task-card {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .task-form {
-    flex-direction: column;
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }
+
+/* Responsive layout */
 
 @media (max-width: 800px) {
   .kanban-board {
@@ -247,5 +428,37 @@ button:disabled {
 
   .column-tasks {
     min-height: 100px;
+  }
+}
+
+@media (max-width: 640px) {
+  .dashboard {
+    padding: 24px 16px;
+  }
+
+  .dashboard-header,
+  .task-card {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .task-form {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 480px) {
+  .delete-modal {
+    padding: 24px;
+  }
+
+  .delete-modal-actions {
+    flex-direction: column-reverse;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .delete-modal {
+    animation: none;
   }
 }

@@ -11,3 +11,4 @@ aiogram>=3.13,<4
 celery[redis]>=5.4,<6
 openai>=2.0,<4.0
 redis>=5,<8
+python-multipart

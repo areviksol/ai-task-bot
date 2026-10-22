@@ -22,3 +22,9 @@ export function createTask(title: string): Promise<Task> {
     body: JSON.stringify({ title }),
   });
 }
+
+export async function deleteTask(taskId: string): Promise<void> {
+  await apiRequest(`/tasks/${taskId}`, {
+    method: "DELETE",
+  });
+}

@@ -1,95 +1,96 @@
 # AI Task Bot
 
-**An Omni-Channel Task Management System powered by Telegram, FastAPI, React, PostgreSQL, Redis, and Celery.**
+**Omni-channel task management with Telegram, OpenAI voice transcription, FastAPI, React, PostgreSQL, Redis, and Celery.**
 
-AI Task Bot allows users to create and manage tasks through Telegram text messages, voice messages, and a responsive web dashboard. Tasks are synchronized in real time, with asynchronous voice transcription and reliable background processing.
+Create tasks using Telegram text or voice messages and manage them in a web dashboard. Telegram voice transcription is processed asynchronously, and task changes are delivered to connected dashboards in real time.
 
 ## Features
 
-### Telegram Bot
-- Create tasks by sending text messages.
-- Create tasks using voice messages transcribed with OpenAI.
-- Receive confirmations and error notifications.
-- Sign in to the web dashboard using a secure, single-use Telegram login link.
-- Prevent duplicate tasks from repeated Telegram message delivery.
+### Telegram bot
 
-### Web Dashboard
-- Responsive React and TypeScript interface.
-- Kanban board with Pending, In Progress, and Completed columns.
-- Drag-and-drop task status updates.
-- Create, view, update, and delete tasks.
-- Real-time synchronization using WebSockets.
-- Authenticated access to each user's tasks.
+- Create a task by sending a text message.
+- Create a task from a Telegram voice message using OpenAI transcription.
+- Receive success and failure notifications.
+- Sign in to the web dashboard using an expiring, single-use `/login` link.
+- Avoid duplicate task creation when Telegram messages are delivered more than once.
 
-### Backend and Reliability
-- FastAPI REST API.
+### Web dashboard
+
+- React and TypeScript interface with a responsive Kanban board.
+- **Pending**, **In Progress**, and **Completed** columns.
+- Drag and drop to update task status.
+- Create, inspect, and delete tasks, with confirmation before deletion.
+- Real-time updates through WebSockets and Redis Pub/Sub.
+- User-specific task access through authenticated sessions.
+
+**Kanban dashboard**
+
+![Kanban dashboard showing Pending, In Progress, and Completed tasks](docs/screenshots/dashboard.jpg)
+
+**Task deletion confirmation**
+
+![Custom delete-task confirmation dialog](docs/screenshots/delete-confirmation.jpg)
+
+### Browser microphone 
+
+The frontend includes a microphone control that records browser audio using `MediaRecorder` and submits it as a multipart upload. This uses a separate authenticated `POST /api/v1/tasks/voice` endpoint rather than Telegram file IDs.
+
+
+![Browser microphone button on the task creation toolbar](./docs/screenshots/browser-microphone.jpg)
+
+### Reliability
+
 - PostgreSQL persistence with SQLAlchemy and Alembic migrations.
-- Redis as a Celery message broker and real-time event transport.
-- Dedicated Celery worker for voice transcription.
-- Celery Beat for periodic recovery of interrupted voice jobs.
-- Retry handling for transient failures.
-- Voice-job lease ownership, renewal, and stale-worker protection.
-- Idempotent task creation and user-level data isolation.
+- Redis-backed Celery queue for Telegram voice transcription.
+- Celery Beat scheduling for recovery of interrupted voice jobs.
+- Atomic job claims, leases, lease renewal, and stale-worker protection.
+- Retry handling and explicit failure reporting, including OpenAI quota errors.
+- Automated backend tests and GitHub Actions CI.
 
-## Technology Stack
+## Technology stack
 
-| Layer | Technology |
-|---|---|
-| Backend | Python, FastAPI |
-| Frontend | React, TypeScript, Vite |
-| Telegram Bot | aiogram |
-| Database | PostgreSQL, SQLAlchemy |
-| Migrations | Alembic |
-| Background Processing | Celery, Celery Beat |
-| Message Broker | Redis |
-| Voice Transcription | OpenAI API |
-| Real-Time Updates | WebSockets, Redis Pub/Sub |
-| Containerization | Docker, Docker Compose |
-| Testing | pytest |
-| Continuous Integration | GitHub Actions |
-| Frontend Web Server | Nginx |
+| Area | Technology |
+| --- | --- |
+| Backend / API | Python, FastAPI, SQLAlchemy |
+| Telegram integration | aiogram |
+| Database / migrations | PostgreSQL, Alembic |
+| Background processing | Celery, Celery Beat, Redis |
+| Voice transcription | OpenAI API |
+| Frontend | React, TypeScript, Vite, dnd-kit |
+| Real-time updates | WebSockets, Redis Pub/Sub |
+| Frontend web server | Nginx |
+| Containerization | Docker Compose |
+| Tests / CI | pytest, GitHub Actions |
 
 ## Architecture
 
 ```text
-                     Telegram User
-                           |
-                    Text / Voice
-                           |
-                      aiogram Bot
-                           |
-                  +--------+--------+
-                  |                 |
-              Text Task         Voice Job
-                  |                 |
-                  v                 v
-              PostgreSQL       Redis Queue
-                                    |
-                               Celery Worker
-                                    |
-                            OpenAI Transcription
-                                    |
-                                PostgreSQL
-                                    |
-                           Redis Pub/Sub Event
-                                    |
-                                 FastAPI
-                                    |
-                                WebSocket
-                                    |
-                             React Dashboard
+Telegram text ──> aiogram bot ──────────────> PostgreSQL
+                    │                              │
+Telegram voice ─────┘                              │
+                    │                              │
+                    └─> Redis / Celery queue       │
+                                  │                │
+                             Celery worker         │
+                                  │                │
+                           OpenAI transcription    │
+                                  │                │
+                                  └───────────────>│
+                                                   │
+React dashboard <── Nginx <── FastAPI <─────────────┘
+       ▲                       │
+       └────── WebSocket <─────┴── Redis Pub/Sub events
 ```
 
-The React dashboard also communicates with FastAPI through authenticated HTTP requests to read and update tasks.
+The React dashboard makes authenticated REST requests to FastAPI through Nginx. When tasks are created or changed, Redis Pub/Sub events notify connected WebSocket clients. Telegram voice work is queued so OpenAI transcription does not block the bot's message-handling path.
 
-## Running with Docker Compose
+## Run locally with Docker Compose
 
 ### Prerequisites
 
-- Docker Desktop or Docker Engine
-- Docker Compose
-- A Telegram bot token obtained from [BotFather](https://t.me/BotFather)
-- An OpenAI API key with available transcription credits
+- Docker Desktop or Docker Engine with Docker Compose.
+- A Telegram bot token from [BotFather](https://t.me/BotFather).
+- An [OpenAI API key](https://platform.openai.com/api-keys) with available API credits for voice transcription.
 
 ### 1. Clone the repository
 
@@ -100,246 +101,154 @@ cd ai-task-bot
 
 ### 2. Configure environment variables
 
-Copy the example environment file:
-
 ```bash
 cp .env.example .env
 ```
 
-Edit `.env` with your local configuration.
-
-The application uses variables including:
-
-| Variable | Purpose |
-|---|---|
-| `POSTGRES_USER` | PostgreSQL username |
-| `POSTGRES_PASSWORD` | PostgreSQL password |
-| `POSTGRES_DB` | PostgreSQL database name |
-| `POSTGRES_HOST` | PostgreSQL hostname |
-| `POSTGRES_PORT` | PostgreSQL port |
-| `REDIS_HOST` | Redis hostname |
-| `REDIS_PORT` | Redis port |
-| `TELEGRAM_BOT_TOKEN` | Telegram bot authentication |
-| `OPENAI_API_KEY` | OpenAI transcription API |
-| `FRONTEND_URL` | URL used in Telegram login links |
-| `SESSION_COOKIE_SECURE` | Controls HTTPS-only session cookies |
-
-For the Docker Compose setup, use the internal service hostnames:
+Open `.env` and set credentials and tokens. For services **running in Docker Compose**, use the internal Docker network names:
 
 ```dotenv
+POSTGRES_USER=taskbot
+POSTGRES_PASSWORD=replace_with_a_strong_local_password
+POSTGRES_DB=taskbot
 POSTGRES_HOST=db
 POSTGRES_PORT=5432
 
 REDIS_HOST=redis
 REDIS_PORT=6379
 
+TELEGRAM_BOT_TOKEN=replace_with_your_telegram_bot_token
+OPENAI_API_KEY=replace_with_your_openai_api_key
+
 FRONTEND_URL=http://localhost:8080
 SESSION_COOKIE_SECURE=false
 ```
 
-Set the remaining values in your local `.env` file, including your database credentials and API keys.
 
-**Security:** Never commit `.env` or real credentials. `.env.example` must contain placeholders only. `SESSION_COOKIE_SECURE=false` is intended for local HTTP development; use secure cookies with HTTPS in production.
+### 3. Start infrastructure and apply migrations
 
-### 3. Start the application
+Start PostgreSQL and Redis:
+
+```bash
+docker compose up -d db redis
+```
+
+Build the API image, then initialize the database schema:
+
+```bash
+docker compose build api
+docker compose run --rm api alembic upgrade head
+```
+
+Start the complete application:
 
 ```bash
 docker compose up -d --build
-```
-
-Check service status:
-
-```bash
 docker compose ps
 ```
 
-The Docker Compose configuration orchestrates seven services:
+If your Compose service entrypoint does not support the one-off migration command, start the API and run `docker compose exec api alembic upgrade head` instead. Complete migrations before using the application.
 
-| Service | Responsibility |
-|---|---|
-| `frontend` | React application served by Nginx |
-| `api` | FastAPI HTTP and WebSocket endpoints |
-| `bot` | Telegram bot |
-| `worker` | Asynchronous transcription processing |
-| `beat` | Periodic recovery scheduling |
-| `db` | PostgreSQL |
-| `redis` | Message broker and Pub/Sub |
+### 4. Open the dashboard and log in
 
-### 4. Apply database migrations
+1. Open **http://localhost:8080**.
+2. Open your Telegram bot, send `/start`, then `/login`.
+3. Open the newly generated login link **on the same computer**.
+4. Create a Telegram task and verify that it appears in the dashboard without a manual refresh.
+5. Drag the task to another column; optionally test task deletion.
 
-```bash
-docker compose exec api alembic upgrade head
-```
+Login links are single-use and expire. Do not share a URL containing a login token. `localhost` in the login link means the computer running the Docker stack.
 
-### 5. Open the dashboard
+**Login screen**
 
-Visit:
+![Telegram login page explaining how to sign in](docs/screenshots/login.jpg)
 
-**http://localhost:8080**
+### Services
 
-The frontend uses Nginx to forward API and WebSocket traffic to FastAPI.
+| Compose service | Responsibility |
+| --- | --- |
+| `frontend` | Nginx serving the compiled React application |
+| `api` | FastAPI HTTP and WebSocket API |
+| `bot` | Telegram polling bot |
+| `worker` | Celery transcription worker |
+| `beat` | Periodic voice-job recovery scheduler |
+| `db` | PostgreSQL persistence |
+| `redis` | Celery broker and real-time event transport |
 
-### 6. Log in through Telegram
+## Demonstration workflows
 
-1. Open your Telegram bot.
-2. Send `/start`.
-3. Send `/login`.
-4. Open the newly generated login link.
-5. View your tasks in the dashboard.
+### Telegram text task
 
-Login links are single-use and expire. Do not share them with other users.
+Send a message such as `Prepare the project presentation`. The bot saves a task to PostgreSQL, and the dashboard updates through its WebSocket connection.
 
-## Example Workflows
+### Telegram voice task
 
-### Text Task Creation
+Record and send a short voice message. The bot registers a voice job, Celery processes it asynchronously, OpenAI transcribes the audio, and the resulting task appears on the dashboard. The bot sends a confirmation or an error notification.
 
-1. Send a message to the Telegram bot:
+### Kanban status and deletion
 
-   `Prepare the project presentation`
+Drag a task from Pending to In Progress or Completed and refresh the page to confirm the new status is persisted. Use the delete button to open the confirmation modal before removal.
 
-2. The bot creates a task in PostgreSQL.
-3. The backend publishes a task-change notification through Redis.
-4. The dashboard receives the event through WebSockets.
-5. The Kanban board refreshes without manually reloading the page.
+### Browser microphone 
 
-### Voice Task Creation
+The browser records audio and submits it to `/api/v1/tasks/voice`. If the upload endpoint has been implemented and verified, OpenAI transcription creates a task for the authenticated user. Browser microphone access works on `localhost` during development; public deployments generally require HTTPS.
 
-1. Send a Telegram voice message.
-2. The bot registers a voice-processing job and queues background work.
-3. A Celery worker claims the job using a time-limited lease.
-4. The worker sends the audio for transcription.
-5. The transcribed text becomes a task.
-6. The bot sends a confirmation and the dashboard updates.
+## Testing and CI
 
-Voice transcription requires an OpenAI API key with sufficient credits.
+The backend test suite covers authentication and ownership, task CRUD, Telegram idempotency, voice-job claiming and leases, retries, recovery, and worker failure handling.
 
-### Task Status Updates
+### Backend tests
 
-Tasks move between three statuses:
-
-- **Pending**
-- **In Progress**
-- **Completed**
-
-Users can change task status through the dashboard, including drag-and-drop on the Kanban board.
-
-## Resilience and Error Handling
-
-### Duplicate Prevention
-
-Telegram may deliver the same update more than once. The application uses message identifiers and database constraints to prevent duplicate task creation.
-
-### Voice Job Reliability
-
-Voice-processing jobs are tracked in PostgreSQL.
-
-The processing system includes:
-
-- Explicit job states and attempt tracking.
-- Atomic job claiming.
-- Lease tokens to identify the active worker.
-- Lease renewal while processing.
-- Protection against stale workers completing another worker's job.
-- Retries for transient connection and API failures.
-- Handling for exhausted OpenAI API quotas.
-- Periodic recovery of interrupted or abandoned jobs.
-
-### Authentication and Authorization
-
-The application uses single-use Telegram login tokens and HTTP-only session cookies. Task operations are scoped to the authenticated user.
-
-## Testing
-
-The backend includes unit and integration tests covering:
-
-- Authentication and session handling.
-- Task API operations and authorization.
-- Telegram message idempotency.
-- Voice job state transitions.
-- Lease claiming and renewal.
-- Worker heartbeat behavior.
-- Voice recovery scheduling.
-- Successful and duplicate voice processing.
-- Failure handling, retries, and retry exhaustion.
-
-The integration tests use an isolated PostgreSQL test database and apply schema migrations through Alembic.
-
-To run tests from the `backend` directory, ensure the local Python dependencies and dedicated test database are configured, then execute:
+Install backend dependencies and configure a **dedicated test PostgreSQL database** using `TEST_DATABASE_URL`. The test fixtures apply Alembic migrations to that test database.
 
 ```bash
+cd backend
 python -m pytest -v
 ```
 
-The test database connection is configured using `TEST_DATABASE_URL`. **Never point this variable to a development or production database.**
 
-### Continuous Integration
+### Frontend checks
 
-GitHub Actions automatically performs:
-
-- Backend tests with a PostgreSQL service.
-- Frontend TypeScript and production build checks.
-- Docker Compose configuration validation.
-
-The CI workflow uses separate test credentials and does not require real Telegram or OpenAI requests.
-
-## Useful Commands
-
-Start containers:
+From the repository root:
 
 ```bash
-docker compose up -d --build
+cd frontend
+npm ci
+npm run build
 ```
 
-Check container status:
+### GitHub Actions
+
+The workflow at `.github/workflows/ci.yml` runs backend tests with PostgreSQL, checks the frontend production build, and validates the Docker Compose configuration. It uses testing-only credentials and does not depend on live Telegram or OpenAI API requests.
+
+## Troubleshooting
+
+| Problem | What to check |
+| --- | --- |
+| Dashboard does not load | `docker compose ps` and `docker compose logs --tail=100 frontend api` |
+| Login link expired or already used | Send `/login` again and open the new link |
+| Login doesn't persist | For local HTTP, check `SESSION_COOKIE_SECURE=false` and recreate the API container |
+| Nginx returns HTTP 405 for API calls | Check the frontend's `/api/v1` base path and Nginx `/api/` proxy |
+| Telegram voice transcription fails | Check API credits, configuration, and `docker compose logs --tail=100 worker` |
+| Real-time events are missing | Check the `/ws/` Nginx proxy and Redis/API logs |
+| Missing database tables | Confirm `alembic upgrade head` completed successfully |
+| Web microphone upload fails | Confirm the `/api/v1/tasks/voice` route exists and review API logs |
+
+Useful commands:
 
 ```bash
 docker compose ps
-```
-
-View logs:
-
-```bash
 docker compose logs -f api bot worker
-```
-
-Run migrations:
-
-```bash
-docker compose exec api alembic upgrade head
-```
-
-Stop containers:
-
-```bash
 docker compose down
 ```
 
-Do not use `docker compose down -v` unless you intentionally want to remove persistent Docker volumes, including database data.
+## Engineering decisions
 
-## Engineering Decisions
+- **FastAPI:** Separates HTTP endpoints, authentication, task logic, and background workflows.
+- **PostgreSQL + Alembic:** Provides durable data and reproducible schema changes.
+- **Redis + Celery:** Keeps Telegram transcription asynchronous and allows retries.
+- **Job leases and recovery:** Protects against worker interruption, stale completions, and duplicate processing.
+- **WebSockets + Redis Pub/Sub:** Delivers task-change notifications to logged-in dashboards.
+- **Telegram login links:** Provides single-use sign-in without dashboard passwords.
+- **Nginx + Docker Compose:** Runs the full assessment stack behind a single local web origin.
 
-**FastAPI:** Provides a modular Python backend with REST and WebSocket support.
-
-**PostgreSQL:** Maintains durable task, user, authentication, and voice-job records.
-
-**Redis + Celery:** Moves voice transcription out of the Telegram message-handling path so slow external API calls do not block bot responsiveness.
-
-**Lease-based voice processing:** Reduces the risk of conflicting workers and supports recovery from interrupted processing.
-
-**WebSockets + Redis Pub/Sub:** Synchronizes task changes across Telegram and the web dashboard.
-
-**Docker Compose:** Provides a reproducible development and assessment environment with the required infrastructure and application services.
-
-## Limitations and Future Improvements
-
-- Live voice transcription requires valid OpenAI API credits.
-- The provided Docker Compose setup is intended for local evaluation. Public production hosting would additionally require HTTPS, production secret management, backup policies, and deployment hardening.
-- Future improvements could include task due dates, priorities, reminders, and advanced filtering.
-
-## Repository
-
-[github.com/areviksol/ai-task-bot](https://github.com/areviksol/ai-task-bot)
-
----
-
-Developed as a full-stack automation engineering technical assessment, demonstrating Telegram integration, asynchronous processing, reliable task management, real-time synchronization, and Docker-based orchestration.

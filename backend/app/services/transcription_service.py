@@ -100,3 +100,34 @@ class TranscriptionService:
                         )
 
         return bytes(content)
+
+
+    def transcribe_audio(
+        self,
+        audio: bytes,
+        filename: str = "recording.webm",
+    ) -> str:
+        if not audio:
+            raise TranscriptionError("Audio recording is empty")
+
+        if len(audio) > self.MAX_AUDIO_BYTES:
+            raise TranscriptionError(
+                "Audio file exceeds maximum size"
+            )
+
+        audio_file = io.BytesIO(audio)
+        audio_file.name = filename
+
+        result = self.client.audio.transcriptions.create(
+            model=self.settings.openai_transcription_model,
+            file=audio_file,
+        )
+
+        text = result.text.strip()
+
+        if not text:
+            raise TranscriptionError(
+                "Audio transcription returned empty text"
+            )
+
+        return text
